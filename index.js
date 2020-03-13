@@ -1,41 +1,45 @@
-/** Dynamic load scripts.
+/** Dynamic scripts loading for modern browsers - https://github.com/fengyuanchen/load-scripts
  * @param {string} urls - The scripts to load.
  * @returns {Promise} - A Promise instance. */
 
-import {isObj, setAttr} from '../utils';//
+import {isObj, setAttr, domQ} from '../utils';// 
 import {omit} from '../components/q-ui-bootstrap/utils'; 
- 
-/**  */
+
 export default function getScripts(attrs, to = 'body'){
   return Promise.all(attrs.map((v, i) => new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    const loadend = () => {
-      script.onerror = null;
-      script.onload = null;
-    };
+		if(domQ(`[src="${v.src}"]`)) return;// MAKE SURE...!!!
+		
+		const DOC = document;
+		const script = DOC.createElement('script');
+		const loadend = () => {
+			script.onerror = null;
+			script.onload = null;
+		};
 
-    script.onerror = (e) => {
-      const err = new Error(`Failed to load script: ${v.src ? v.src : i}`);
+		script.onerror = function(e){
+			const err = new Error(`Failed to load script: ${v.src ? v.src : i}`);
 
-      // err.data = v.src || v.text;
-      err.e = e;
+			// err.data = v.src || v.text;
+			err.e = e;
 
-      loadend();
-      reject(err);
-    };
+			loadend();
+			reject(err);
+		};
 
-    script.onload = (e) => {
-      // let i = {
-        // e: e,
-        // data: v.src || v.text
-      // };
-      loadend();
-      resolve(e);
-    };
+		script.onload = function(e){
+			// let i = {
+				// e: e,
+				// data: v.src || v.text
+			// };
+			loadend();
+			resolve(e);
+		};
+		
+		script.async = v.attrs && v.attrs.async ? v.attrs.async : 1;
 
-    // Set more valid attributes to script tag
-    if(isObj(v.attrs)){ // 
-			let omitAttr = omit(v.attrs, ['src','text','async','onerror','onload']);
+		// Set more valid attributes to script tag
+		if(isObj(v.attrs)){ // 
+			let omitAttr = omit(v.attrs, ['text','async','onerror','onload']);
 			// console.log(omitAttr);
 			setAttr(script, omitAttr);
 			/* // Available attributes script tag
@@ -51,20 +55,20 @@ export default function getScripts(attrs, to = 'body'){
 					integrity: ""
 				}
 			*/
-			
-			script.async = v.attrs.async ? v.attrs.async : 1;// true
+			// script.async = v.attrs.async ? v.attrs.async : 1;// true
 		}
 		
-		v.src ? script.src = v.src : script.text  = v.text; // script.textContent
+		script.src = v.src;
+		// v.src ? script.src = v.src : script.text  = v.text; // script.textContent
 
-    document[to].appendChild(script);// parent.appendChild(script);
+		DOC[to].appendChild(script);// parent.appendChild(script);
 		
 		// Return script tag to resolve then if internal code
-		if(resolve && v.text) resolve(script);
+		// if(resolve && v.text) resolve(script);
   })));
 }
 
-// USAGE: 
+/** @USAGE: */
 /* getScripts(
 	[
     {text: `function Ok(say){console.log('%cOK ' + say, 'color:red;');}Ok('Bro');`},
@@ -79,6 +83,6 @@ export default function getScripts(attrs, to = 'body'){
 	// ['/js/axios.min.js'],
 	'head'
 ).then(e => {
-	// console.log(window.axios);
+	// console.log(window.pdfMake);
 	console.log(e);
 }); */
